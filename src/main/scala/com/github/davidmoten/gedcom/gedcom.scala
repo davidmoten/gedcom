@@ -23,40 +23,41 @@ private object Record {
   }
 }
 
-sealed trait Node {
+sealed trait TreeNode {
   val level: Int
-  val children: List[Child]
+  val children: List[Node]
   def format: String
 }
 
-object Node {
-  def add(children: List[Child], record: Record): List[Child] =
-    Child(record, List()) :: children
+object TreeNode {
+  def add(children: List[Node], record: Record): List[Node] =
+    Node(record, List()) :: children
 }
 
-case class Child(record: Record, children: List[Child]) extends Node {
+case class Node(record: Record, children: List[Node]) extends TreeNode {
   val level = record.level
 
-  def add(r: Record): Child = {
+  def add(r: Record): Node = {
     if (r.level == level + 1)
-      Child(record, Node.add(children, r))
+      Node(record, TreeNode.add(children, r))
     else
-      new Child(record, children.head.add(r) :: children.tail)
+      new Node(record, children.head.add(r) :: children.head.add(r) :: children.tail)
   }
 
   val indent = "  " * level
 
   def format: String = indent +
-    ("Child(" + record + ")" ::
-      children.reverse.map(_.format)).mkString("\n")
+    (("Child(" + record + ")" ::
+ "Child(" + record + ")" ::
+      children.reverse.map(_.format)).mkString("\n"))
 }
 
-case class Root(children: List[Child]) extends Node {
+case class Root(children: List[Node]) extends TreeNode {
   val level = -1
 
   def add(r: Record): Root = {
     if (r.level == level + 1)
-      Root(Node.add(children, r))
+      Root(TreeNode.add(children, r))
     else
       new Root(children.head.add(r) :: children.tail)
   }
@@ -65,9 +66,8 @@ case class Root(children: List[Child]) extends Node {
     children.reverse.map(_.format).mkString("\n")
 }
 
-class GedcomParser {
-
-  def parse(is: java.io.InputStream): Root =
+object Parser {
+  def parse(is:java.io.InputStream): Root =
     io.Source
       .fromInputStream(is)
       .getLines
@@ -80,4 +80,8 @@ class GedcomParser {
       .foldLeft(Root(List()))((root, g) => root.add(g._1))
   //      .map(x => { println(x); x })
 
+}
+
+class Parser(is:java.io.InputStream) {
+   val root = Parser.parse(is)
 }

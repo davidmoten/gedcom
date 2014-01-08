@@ -8,13 +8,13 @@ class ParserTest {
 
   @Test
   def testParserOnSimpleFile {
-    val t = new GedcomParser().parse(getClass.getResourceAsStream("/simple.ged"))
+    val t =  Parser.parse(getClass.getResourceAsStream("/simple.ged"))
     println(t.format)
   }
 
   @Test
   def testParserOnComplexFile {
-    println(new GedcomParser().parse(getClass.getResourceAsStream("/allged.ged")).format)
+    println(Parser.parse(getClass.getResourceAsStream("/allged.ged")).format)
   }
 
 }
