@@ -8,13 +8,20 @@ class ParserTest {
 
   @Test
   def testParserOnSimpleFile {
-    val t =  Parser.parse(getClass.getResourceAsStream("/simple.ged"))
-    println(t.format)
+    val p = new Parser(getClass.getResourceAsStream("/simple.ged"))
+    println(p.root.format)
+    println(p.refs.mkString("\n"))
+    assertTrue(p.refs.keySet.contains("MOTHER"))
+    assertTrue(p.refs.keySet.contains("FATHER"))
+    assertTrue(p.refs.keySet.contains("CHILD"))
+    assertTrue(p.refs.keySet.contains("SUBMITTER"))
+    assertTrue(p.refs.keySet.contains("FAMILY"))
   }
 
   @Test
   def testParserOnComplexFile {
-    println(Parser.parse(getClass.getResourceAsStream("/allged.ged")).format)
+    val t = Parser.parse(getClass.getResourceAsStream("/allged.ged"))
+//    println(t.format)
   }
 
 }
