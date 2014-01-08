@@ -8,7 +8,7 @@ class ParserTest {
 
   @Test
   def testParserOnSimpleFile {
-    val p = new Parser(getClass.getResourceAsStream("/simple.ged"))
+    val p = new Tree(getClass.getResourceAsStream("/simple.ged"))
     println(p.root.format)
     println(p.refs.mkString("\n"))
     assertTrue(p.refs.keySet.contains("MOTHER"))

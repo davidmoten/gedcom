@@ -68,42 +68,52 @@ case class Root(children: List[Node]) extends TreeNode {
 
 object Parser {
   def parse(is: java.io.InputStream): Root =
-    io.Source
-      .fromInputStream(is)
-      .getLines
-      .map(_.filter(c => c >= 32 || c == 9))
-      .zipWithIndex
-      .filter(!_._1.isEmpty())
-      .map(x => (Record.parse(x._1), x._2))
-      .filter(_._1.isDefined)
-      .map(x => (x._1.get, x._2))
-      .foldLeft(Root(List()))((root, g) => root.add(g._1))
-  //      .map(x => { println(x); x })
-
+    { //using an iterator all the way through here means that each line gets 
+      //fully processed including the foldLeft and if an error occurs the log 
+      //should indicate what line it occurred on
+      var lineNo = -1
+      try {
+        //record the current line no for errors
+        io.Source
+          .fromInputStream(is)
+          .getLines
+          .map(_.filter(c => c >= 32 || c == 9))
+          .zipWithIndex
+          .map(x => { lineNo = x._2; x })
+          .filter(!_._1.isEmpty())
+          .map(x => (Record.parse(x._1), x._2))
+          .filter(_._1.isDefined)
+          .map(x => (x._1.get, x._2))
+          .foldLeft(Root(List()))((root, g) => root.add(g._1))
+      } catch {
+        case e: Exception => 
+          throw new RuntimeException("error occurred processing line " + lineNo, e)
+      }
+    }
 }
 
-class Parser(is: java.io.InputStream) {
+class Tree(is: java.io.InputStream) {
   val root = Parser.parse(is)
   val refs = extractRefs(root)
-  
+
   private def extractRefs(node: TreeNode): Map[String, Node] = {
-    val map:Map[String,Node] = node match {
+    val map: Map[String, Node] = node match {
       case r: Root => Map()
       case n: Node => n.record.id match {
         case Some(v) => Map(v -> n)
         case None => Map()
       }
     }
-    node.children.flatMap(extractRefs(_).toList).toMap ++ map 
+    node.children.flatMap(extractRefs(_).toList).toMap ++ map
   }
-  
-  def ref(record:Record):Option[Node] = {
+
+  def ref(record: Record): Option[Node] = {
     record.xref match {
       case Some(name) => refs.get(name)
       case None => None
     }
   }
-  
-  def ref(node:Node):Option[Node] = ref(node.record)
-  
+
+  def ref(node: Node): Option[Node] = ref(node.record)
+
 }
