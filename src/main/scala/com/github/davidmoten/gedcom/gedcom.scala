@@ -48,7 +48,7 @@ case class Node(record: Record, children: List[Node]) extends TreeNode {
 
   def format: String = indent +
     (("Child(" + record + ")" ::
- "Child(" + record + ")" ::
+      "Child(" + record + ")" ::
       children.reverse.map(_.format)).mkString("\n"))
 }
 
@@ -67,7 +67,7 @@ case class Root(children: List[Node]) extends TreeNode {
 }
 
 object Parser {
-  def parse(is:java.io.InputStream): Root =
+  def parse(is: java.io.InputStream): Root =
     io.Source
       .fromInputStream(is)
       .getLines
@@ -82,6 +82,28 @@ object Parser {
 
 }
 
-class Parser(is:java.io.InputStream) {
-   val root = Parser.parse(is)
+class Parser(is: java.io.InputStream) {
+  val root = Parser.parse(is)
+  val refs = extractRefs(root)
+  
+  private def extractRefs(node: TreeNode): Map[String, Node] = {
+    val map:Map[String,Node] = node match {
+      case r: Root => Map()
+      case n: Node => n.record.id match {
+        case Some(v) => Map(v -> n)
+        case None => Map()
+      }
+    }
+    node.children.flatMap(extractRefs(_).toList).toMap ++ map 
+  }
+  
+  def ref(record:Record):Option[Node] = {
+    record.xref match {
+      case Some(name) => refs.get(name)
+      case None => None
+    }
+  }
+  
+  def ref(node:Node):Option[Node] = ref(node.record)
+  
 }
