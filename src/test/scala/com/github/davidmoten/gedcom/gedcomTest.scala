@@ -14,7 +14,7 @@ class ParserTest {
 
   @Test
   def testParserOnComplexFile {
-   // println(new GedcomParser().parse(getClass.getResourceAsStream("/allged.ged")).format)
+    println(new GedcomParser().parse(getClass.getResourceAsStream("/allged.ged")).format)
   }
 
 }
