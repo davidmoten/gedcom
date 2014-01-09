@@ -4,8 +4,8 @@ case class Line(
   level: Int, id: Option[String], tag: String,
   xref: Option[String], value: Option[String]) {
   require(level >= 0 && level <= 99)
-  require(id.isEmpty||id.get.length<=20)
-  require(tag.length<=31)
+  require(id.isEmpty || id.get.length <= 20)
+  require(tag.length <= 31)
 }
 
 private object Line {
@@ -84,7 +84,7 @@ object Parser {
           .map(_.filter(c => c >= 32 || c == 9))
           .zipWithIndex
           .map(x => { lineNo = x._2; x })
-          .map(x=> {require(x._1.length<=255);x})
+          .map(x => { require(x._1.length <= 255); x })
           .filter(!_._1.isEmpty())
           .map(x => (Line.parse(x._1), x._2))
           .filter(_._1.isDefined)
@@ -121,4 +121,18 @@ class Tree(is: java.io.InputStream) {
 
   def ref(node: Node): Option[Node] = ref(node.line)
 
+}
+
+private object GrammarLine {
+  import java.util.regex._
+  val pattern = Pattern.compile(
+    "^\\s*(n|(\\+\\d+))\\s+((<<\\w+>>)|((\\w+)\\s+((@([^@ ]+)@)|(<\\w+>))))\\s*{(0|1):(0|1|M))\\s*$", Pattern.DOTALL)
+  //1=relative level,4=def ref, 6=tag, 9=xref,10=name, 11=min,12=max
+  def parse(line: String) = {
+    val m = pattern.matcher(line)
+    if (!m.find)
+      None
+    else
+      Some(line)
+  }
 }
