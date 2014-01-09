@@ -20,28 +20,33 @@ class ParserTest {
 
   @Test
   def testParserOnComplexFile {
-    val t = Parser.parse(getClass.getResourceAsStream("/allged.ged"))
+   Parser.parse(getClass.getResourceAsStream("/allged.ged"))
 //    println(t.format)
   }
 
+   @Test
+  def testParserOnSampleFileFrom551StandardPdf {
+    Parser.parse(getClass.getResourceAsStream("/sample-from-5.5.1-standard.ged"))
+  }
+  
 }
 
 @Test
-class RecordParserTest {
+class LineParserTest {
 
   @Test
-  def testRecordParser {
-    val record = Record.parse("2 PLAC death place")
+  def testLineParser {
+    val record = Line.parse("2 PLAC death place")
     assertTrue(record.isDefined)
     val rec = record.get
     assertEquals(2,rec.level)
     assertFalse(rec.id.isDefined)
-    assertEquals("Record(2,None,PLAC,None,Some(death place))",rec.toString)
+    assertEquals("Line(2,None,PLAC,None,Some(death place))",rec.toString)
   }
 
   @Test
-  def testRecordParserId {
-    val record = Record.parse("0 @FATHER@ INDI")
+  def testLineParserId {
+    val record = Line.parse("0 @FATHER@ INDI")
     assertTrue(record.isDefined)
     val rec = record.get
     assertEquals(0,rec.level)

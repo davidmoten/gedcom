@@ -1,20 +1,24 @@
 package com.github.davidmoten.gedcom
 
-case class Record(
+case class Line(
   level: Int, id: Option[String], tag: String,
-  xref: Option[String], value: Option[String])
+  xref: Option[String], value: Option[String]) {
+  require(level >= 0 && level <= 99)
+  require(id.isEmpty||id.get.length<=20)
+  require(tag.length<=31)
+}
 
-private object Record {
+private object Line {
   import java.util.regex._
   val pattern = Pattern.compile(
     "^\\s*(\\d)\\s+(@([^@ ]+)@\\s+)?(\\w+)(\\s+@([^@ ]+)@)?(\\s(.*))?$", Pattern.DOTALL)
 
-  def parse(line: String): Option[Record] = {
+  def parse(line: String): Option[Line] = {
     val m = pattern.matcher(line)
     if (!m.find)
       None
     else
-      Some(Record(
+      Some(Line(
         level = m.group(1).toInt,
         id = Option(m.group(3)),
         tag = m.group(4),
@@ -30,32 +34,32 @@ sealed trait TreeNode {
 }
 
 object TreeNode {
-  def add(children: List[Node], record: Record): List[Node] =
-    Node(record, List()) :: children
+  def add(children: List[Node], line: Line): List[Node] =
+    Node(line, List()) :: children
 }
 
-case class Node(record: Record, children: List[Node]) extends TreeNode {
-  val level = record.level
+case class Node(line: Line, children: List[Node]) extends TreeNode {
+  val level = line.level
 
-  def add(r: Record): Node = {
+  def add(r: Line): Node = {
     if (r.level == level + 1)
-      Node(record, TreeNode.add(children, r))
+      Node(line, TreeNode.add(children, r))
     else
-      new Node(record, children.head.add(r) :: children.head.add(r) :: children.tail)
+      new Node(line, children.head.add(r) :: children.head.add(r) :: children.tail)
   }
 
   val indent = "  " * level
 
   def format: String = indent +
-    (("Child(" + record + ")" ::
-      "Child(" + record + ")" ::
+    (("Child(" + line + ")" ::
+      "Child(" + line + ")" ::
       children.reverse.map(_.format)).mkString("\n"))
 }
 
 case class Root(children: List[Node]) extends TreeNode {
   val level = -1
 
-  def add(r: Record): Root = {
+  def add(r: Line): Root = {
     if (r.level == level + 1)
       Root(TreeNode.add(children, r))
     else
@@ -80,13 +84,14 @@ object Parser {
           .map(_.filter(c => c >= 32 || c == 9))
           .zipWithIndex
           .map(x => { lineNo = x._2; x })
+          .map(x=> {require(x._1.length<=255);x})
           .filter(!_._1.isEmpty())
-          .map(x => (Record.parse(x._1), x._2))
+          .map(x => (Line.parse(x._1), x._2))
           .filter(_._1.isDefined)
           .map(x => (x._1.get, x._2))
           .foldLeft(Root(List()))((root, g) => root.add(g._1))
       } catch {
-        case e: Exception => 
+        case e: Exception =>
           throw new RuntimeException("error occurred processing line " + lineNo, e)
       }
     }
@@ -99,7 +104,7 @@ class Tree(is: java.io.InputStream) {
   private def extractRefs(node: TreeNode): Map[String, Node] = {
     val map: Map[String, Node] = node match {
       case r: Root => Map()
-      case n: Node => n.record.id match {
+      case n: Node => n.line.id match {
         case Some(v) => Map(v -> n)
         case None => Map()
       }
@@ -107,13 +112,13 @@ class Tree(is: java.io.InputStream) {
     node.children.flatMap(extractRefs(_).toList).toMap ++ map
   }
 
-  def ref(record: Record): Option[Node] = {
+  def ref(record: Line): Option[Node] = {
     record.xref match {
       case Some(name) => refs.get(name)
       case None => None
     }
   }
 
-  def ref(node: Node): Option[Node] = ref(node.record)
+  def ref(node: Node): Option[Node] = ref(node.line)
 
 }
