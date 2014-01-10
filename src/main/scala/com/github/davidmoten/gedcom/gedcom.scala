@@ -10,7 +10,7 @@ case class Line(
 
 private object Line {
   import java.util.regex._
-  val pattern = Pattern.compile(
+  private val pattern = Pattern.compile(
     "^\\s*(\\d)\\s+(@([^@ ]+)@\\s+)?(\\w+)(\\s+@([^@ ]+)@)?(\\s(.*))?$", Pattern.DOTALL)
 
   def parse(line: String): Option[Line] = {
@@ -121,18 +121,4 @@ class Tree(is: java.io.InputStream) {
 
   def ref(node: Node): Option[Node] = ref(node.line)
 
-}
-
-private object GrammarLine {
-  import java.util.regex._
-  val pattern = Pattern.compile(
-    "^\\s*(n|(\\+\\d+))\\s+((<<\\w+>>)|((\\w+)\\s+((@([^@ ]+)@)|(<\\w+>))))\\s*{(0|1):(0|1|M))\\s*$", Pattern.DOTALL)
-  //1=relative level,4=def ref, 6=tag, 9=xref,10=name, 11=min,12=max
-  def parse(line: String) = {
-    val m = pattern.matcher(line)
-    if (!m.find)
-      None
-    else
-      Some(line)
-  }
 }
