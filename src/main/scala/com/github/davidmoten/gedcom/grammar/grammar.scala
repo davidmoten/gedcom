@@ -13,7 +13,7 @@ private object Line {
   import java.util.regex._
 
   private val multPatternEnding = "\\s*{(\\d:(\\d|M))}\\s*$"
-    
+
   private val valuePattern = Pattern.compile(
     "^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+<(\\w+)>" +
       multPatternEnding, Pattern.DOTALL)
@@ -39,11 +39,11 @@ private object Line {
 class Parser(is: java.io.InputStream) {
 
   def parse = {
-    val empty: (List[List[String]], Option[String]) = (List(), None)
+    val empty:(List[List[String]],List[String])= (List(), List())
     io.Source.fromInputStream(is)
       .getLines
       .filter(_.trim.length > 0)
-    //      .foldLeft()
+      .foldLeft(empty)((g,line) => g)
   }
 
 }
