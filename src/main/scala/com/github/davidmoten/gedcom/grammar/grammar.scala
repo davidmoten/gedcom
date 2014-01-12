@@ -123,17 +123,17 @@ private object Grammar {
   }
 
   //1=relative level,4=def ref, 6=tag, 9=xref,10=name, 11=min,12=max
-  def parse(line: String):Option[Element] = {
+  def parse(line: String): Option[Element] = {
     val input: Input = Left(line)
-    val parsers = List(parseDefinitionLine(_),
+    val parsers = List(
+      parseDefinitionLine(_),
       parseValueLine(_),
       parseIdLine(_),
       parseIdReferenceLine(_),
       parseDefinitionReferenceLine(_))
 
     parsers
-      .foldLeft(input)(
-        (either: Input, f: Input => Input) => f(either))
+      .reduce(_ compose _)(input)
       .right.toOption
   }
 
@@ -145,10 +145,11 @@ class Parser(is: java.io.InputStream) {
     io.Source.fromInputStream(is)
       .getLines
       .filter(_.trim.length > 0)
-      .flatMap(line=> {
+      .flatMap(line => {
         println(line);
         val elem = Grammar.parse(line);
-        println(elem);elem})
+        println(elem); elem
+      })
   }
 
 }
