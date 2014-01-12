@@ -39,7 +39,7 @@ private object Grammar {
   import java.util.regex._
   import RegexHelper._
 
-  private val multPatternEnding = "\\s*{(\\d:(\\d|M))}\\s*$"
+  private val multPatternEnding = "\\s*\\{(\\d:(\\d|M))\\}\\s*$"
 
   private val ValuePattern =
     ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+<(\\w+)>" +
