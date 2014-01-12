@@ -145,7 +145,10 @@ class Parser(is: java.io.InputStream) {
     io.Source.fromInputStream(is)
       .getLines
       .filter(_.trim.length > 0)
-      .flatMap(Grammar.parse(_))
+      .flatMap(line=> {
+        println(line);
+        val elem = Grammar.parse(line);
+        println(elem);elem})
   }
 
 }
