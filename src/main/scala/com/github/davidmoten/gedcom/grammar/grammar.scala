@@ -2,8 +2,8 @@ package com.github.davidmoten.gedcom.grammar
 
 trait Element
 sealed trait Depth
-case class AnyDepth extends Depth
-case class DepthZero extends Depth
+case object AnyDepth extends Depth
+case object ZeroDepth extends Depth
 case class RelativeDepth(depth: Int) extends Depth
 sealed trait MultiplicityBound
 case class Specific(value: Integer) extends MultiplicityBound {
@@ -59,8 +59,21 @@ private object Line {
 
   private def parseValue(line: String) = {
     ValuePattern.findFirstMatchIn(line).map(
-      m => Value(AnyDepth(), Tag("SOUR"), "fred", Multiplicity(Specific(1), Unbounded())))
+      m => Value(AnyDepth, Tag("SOUR"), "fred", Multiplicity(Specific(1), Unbounded())))
   }
+
+  private def toDepth(s: String) = {
+    if (s == "0")
+      ZeroDepth
+    else if (s == "n")
+      AnyDepth
+    else 
+      RelativeDepth(s.substring(1).toInt)
+  }
+
+//  private def parseId(line: String) = {
+//    IdPattern.findFirstMatchIn(line).map(m => Id(toDepth(m.group(1)),Tag(m.group(3)),)
+//  }
 
   //1=relative level,4=def ref, 6=tag, 9=xref,10=name, 11=min,12=max
   def parse(line: String) = {
