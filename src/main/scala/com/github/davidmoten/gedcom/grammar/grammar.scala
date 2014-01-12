@@ -9,17 +9,19 @@ sealed trait MultiplicityBound
 case class Specific(value: Integer) extends MultiplicityBound {
   require(value >= 0)
 }
-case class Unbounded extends MultiplicityBound
+case object Unbounded extends MultiplicityBound
 case class Multiplicity(min: MultiplicityBound, max: MultiplicityBound)
 case class Tag(value: String)
 case class Value(depth: Depth, tag: Tag,
   name: String, mult: Multiplicity) extends Element
-case class Id(depth: Depth, tag: Tag, id: String) extends Element
-case class IdReference(depth: Depth, tag: Tag, id: String) extends Element
+case class Id(depth: Depth, tag: Tag, id: String,
+  mult: Multiplicity) extends Element
+case class IdReference(depth: Depth, tag: Tag, id: String,
+  mult: Multiplicity) extends Element
 case class Definition(name: String, node: Node)
 case class DefinitionLine(name: String) extends Element
 case class Node(level: Int, element: Element, children: Node)
-case class DefinitionReference(depth: Depth, name: String) extends Element
+case class DefinitionReference(depth: Depth, name: String, mult: Multiplicity) extends Element
 case class Grammar(root: Definition, definitions: List[Definition])
 
 object RegexHelper {
@@ -39,7 +41,7 @@ private object Grammar {
   import java.util.regex._
   import RegexHelper._
 
-  private val multPatternEnding = "\\s*\\{(\\d:(\\d|M))\\}\\s*$"
+  private val multPatternEnding = "\\s*\\{(\\d):(\\d|M)\\}\\s*$"
 
   private val ValuePattern =
     ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+<(\\w+)>" +
@@ -57,47 +59,71 @@ private object Grammar {
     "^\\s*(0|n|(\\+\\d+))\\s+<<(\\w+)>>" +
     multPatternEnding).r
 
+  private def toBound(s: String): MultiplicityBound =
+    s match {
+      case "M" => Unbounded
+      case _ => Specific(s.toInt)
+    }
+
+  private def toMultiplicity(min: String, max: String) =
+    Multiplicity(toBound(min), toBound(max))
+
   private type Input = Either[String, Element]
 
   private def parseDefinitionLine(input: Input): Input = {
     if (input.isLeft)
-      DefinitionPattern.findFirstMatchIn(input.left.get).map(m => DefinitionLine(m.group(1))) match {
-        case Some(e) => Right(e)
-        case None => input
-      }
+      DefinitionPattern
+        .findFirstMatchIn(input.left.get)
+        .map(
+          m => DefinitionLine(m.group(1))) match {
+            case Some(e) => Right(e)
+            case None => input
+          }
     else
       input
   }
 
   private def parseValueLine(input: Input) = {
     if (input.isLeft)
-      ValuePattern.findFirstMatchIn(input.left.get).map(
-        m => Value(AnyDepth, Tag("SOUR"), "fred", Multiplicity(Specific(1), Unbounded()))) match {
-          case Some(e) => Right(e)
-          case None => input
-        }
+      ValuePattern
+        .findFirstMatchIn(input.left.get)
+        .map(
+          m => Value(toDepth(m.group(1)), Tag(m.group(3)), m.group(4),
+            toMultiplicity(m.group(5), m.group(6)))) match {
+            case Some(e) => Right(e)
+            case None => input
+          }
     else
       input
   }
 
   private def parseIdLine(input: Input) = {
     if (input.isLeft)
-      IdPattern.findFirstMatchIn(input.left.get).map(
-        m => Id(toDepth(m.group(1)), Tag(m.group(4)), m.group(3))) match {
-          case Some(e) => Right(e)
-          case None => input
-        }
+      IdPattern
+        .findFirstMatchIn(input.left.get)
+        .map(
+          m => Id(toDepth(m.group(1)), Tag(m.group(4)), m.group(3),
+            toMultiplicity(m.group(5), m.group(6)))) match {
+            case Some(e) => Right(e)
+            case None => input
+          }
     else
       input
   }
 
   private def parseIdReferenceLine(input: Input) = {
     if (input.isLeft)
-      IdReferencePattern.findFirstMatchIn(input.left.get).map(
-        m => IdReference(toDepth(m.group(1)), Tag(m.group(3)), m.group(4))) match {
-          case Some(e) => Right(e)
-          case None => input
-        }
+      IdReferencePattern
+        .findFirstMatchIn(input.left.get)
+        .map(
+          m => IdReference(
+            toDepth(m.group(1)),
+            Tag(m.group(3)),
+            m.group(4),
+            toMultiplicity(m.group(5), m.group(6)))) match {
+            case Some(e) => Right(e)
+            case None => input
+          }
     else
       input
   }
@@ -105,7 +131,8 @@ private object Grammar {
   private def parseDefinitionReferenceLine(input: Input) = {
     if (input.isLeft)
       DefinitionReferencePattern.findFirstMatchIn(input.left.get).map(
-        m => DefinitionReference(toDepth(m.group(1)), m.group(2))) match {
+        m => DefinitionReference(toDepth(m.group(1)), m.group(3),
+          toMultiplicity(m.group(4), m.group(5)))) match {
           case Some(e) => Right(e)
           case None => input
         }
