@@ -15,6 +15,7 @@ case class Tag(value: String)
 case class Value(depth: Depth, tag: Tag,
   name: String, mult: Multiplicity) extends Element
 case class Id(depth: Depth, tag: Tag, id: String) extends Element
+case class IdReference(depth: Depth, tag: Tag, id: String) extends Element
 case class Definition(name: String, node: Node)
 case class DefinitionLine(name: String) extends Element
 case class Node(level: Int, element: Element, children: Node)
@@ -33,7 +34,7 @@ object RegexHelper {
   }
 }
 
-private object Line {
+private object Grammar {
 
   import java.util.regex._
   import RegexHelper._
@@ -44,7 +45,10 @@ private object Line {
     ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+<(\\w+)>" +
       multPatternEnding).r
 
-  private val IdPattern = ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)" +
+  private val IdPattern = ("^\\s*(0|n|(\\+\\d+))\\s+@([^@]+)@\\s+(\\w+)" +
+    multPatternEnding).r
+
+  private val IdReferencePattern = ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+@([^@]+)@" +
     multPatternEnding).r
 
   private val DefinitionPattern = "^\\s*(\\w+): =\\s*$".r
@@ -53,13 +57,60 @@ private object Line {
     "^\\s*(0|n|(\\+\\d+))\\s+<<(\\w+)>>" +
     multPatternEnding).r
 
-  private def parseDefinitionLine(line: String) = {
-    DefinitionPattern.findFirstMatchIn(line).map(m => DefinitionLine(m.group(1)))
+  private type Input = Either[String, Element]
+
+  private def parseDefinitionLine(input: Input): Input = {
+    if (input.isLeft)
+      DefinitionPattern.findFirstMatchIn(input.left.get).map(m => DefinitionLine(m.group(1))) match {
+        case Some(e) => Right(e)
+        case None => input
+      }
+    else
+      input
   }
 
-  private def parseValue(line: String) = {
-    ValuePattern.findFirstMatchIn(line).map(
-      m => Value(AnyDepth, Tag("SOUR"), "fred", Multiplicity(Specific(1), Unbounded())))
+  private def parseValueLine(input: Input) = {
+    if (input.isLeft)
+      ValuePattern.findFirstMatchIn(input.left.get).map(
+        m => Value(AnyDepth, Tag("SOUR"), "fred", Multiplicity(Specific(1), Unbounded()))) match {
+          case Some(e) => Right(e)
+          case None => input
+        }
+    else
+      input
+  }
+
+  private def parseIdLine(input: Input) = {
+    if (input.isLeft)
+      IdPattern.findFirstMatchIn(input.left.get).map(
+        m => Id(toDepth(m.group(1)), Tag(m.group(4)), m.group(3))) match {
+          case Some(e) => Right(e)
+          case None => input
+        }
+    else
+      input
+  }
+
+  private def parseIdReferenceLine(input: Input) = {
+    if (input.isLeft)
+      IdReferencePattern.findFirstMatchIn(input.left.get).map(
+        m => IdReference(toDepth(m.group(1)), Tag(m.group(3)), m.group(4))) match {
+          case Some(e) => Right(e)
+          case None => input
+        }
+    else
+      input
+  }
+
+  private def parseDefinitionReferenceLine(input: Input) = {
+    if (input.isLeft)
+      DefinitionReferencePattern.findFirstMatchIn(input.left.get).map(
+        m => DefinitionReference(toDepth(m.group(1)), m.group(2))) match {
+          case Some(e) => Right(e)
+          case None => input
+        }
+    else
+      input
   }
 
   private def toDepth(s: String) = {
@@ -67,37 +118,34 @@ private object Line {
       ZeroDepth
     else if (s == "n")
       AnyDepth
-    else 
+    else
       RelativeDepth(s.substring(1).toInt)
   }
 
-//  private def parseId(line: String) = {
-//    IdPattern.findFirstMatchIn(line).map(m => Id(toDepth(m.group(1)),Tag(m.group(3)),)
-//  }
-
   //1=relative level,4=def ref, 6=tag, 9=xref,10=name, 11=min,12=max
-  def parse(line: String) = {
-    (parseDefinitionLine(line) ++
-      parseValue(line))
-      .headOption
+  def parse(line: String):Option[Element] = {
+    val input: Input = Left(line)
+    val parsers = List(parseDefinitionLine(_),
+      parseValueLine(_),
+      parseIdLine(_),
+      parseIdReferenceLine(_),
+      parseDefinitionReferenceLine(_))
+
+    parsers
+      .foldLeft(input)(
+        (either: Input, f: Input => Input) => f(either))
+      .right.toOption
   }
 
-  def parse(is: java.io.InputStream) = {
-    io.Source.fromInputStream(is)
-      .getLines
-
-    null
-  }
 }
 
 class Parser(is: java.io.InputStream) {
 
   def parse = {
-    val empty: (List[List[String]], List[String]) = (List(), List())
     io.Source.fromInputStream(is)
       .getLines
       .filter(_.trim.length > 0)
-      .foldLeft(empty)((g, line) => g)
+      .flatMap(Grammar.parse(_))
   }
 
 }
