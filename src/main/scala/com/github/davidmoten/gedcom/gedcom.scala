@@ -10,11 +10,11 @@ case class Line(
 
 private object Line {
   import java.util.regex._
-  private val pattern = Pattern.compile(
+  private val LinePattern = Pattern.compile(
     "^\\s*(\\d)\\s+(@([^@ ]+)@\\s+)?(\\w+)(\\s+@([^@ ]+)@)?(\\s(.*))?$", Pattern.DOTALL)
 
   def parse(line: String): Option[Line] = {
-    val m = pattern.matcher(line)
+    val m = LinePattern.matcher(line)
     if (!m.find)
       None
     else
