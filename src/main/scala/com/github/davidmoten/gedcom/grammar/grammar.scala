@@ -6,7 +6,9 @@ trait Element {
 sealed trait Depth
 case object AnyDepth extends Depth
 case object ZeroDepth extends Depth
-case class RelativeDepth(depth: Int) extends Depth
+case class RelativeDepth(depth: Int) extends Depth {
+  require(depth >= 1)
+}
 sealed trait MultiplicityBound
 case class Specific(value: Integer) extends MultiplicityBound {
   require(value >= 0)
