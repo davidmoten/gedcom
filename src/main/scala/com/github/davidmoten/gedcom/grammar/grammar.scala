@@ -41,23 +41,33 @@ private object Grammar {
   import java.util.regex._
   import RegexHelper._
 
-  private val multPatternEnding = "\\s*\\{(\\d):(\\d|M)\\}\\s*$"
+  private object Patterns {
 
-  private val ValuePattern =
-    ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+<(\\w+)>" +
+    private val depthPattern = "^\\s*(0|n|(?:\\+\\d+))\\s+"
+    private val multPatternEnding = "\\s*\\{(\\d):(\\d|M)\\}\\s*$"
+
+    val ValuePattern = (
+      depthPattern +
+      "(\\w+)\\s+<(\\w+)>" +
       multPatternEnding).r
 
-  private val IdPattern = ("^\\s*(0|n|(\\+\\d+))\\s+@([^@]+)@\\s+(\\w+)" +
-    multPatternEnding).r
+    val IdPattern = (
+      depthPattern +
+      "@([^@]+)@\\s+(\\w+)" +
+      multPatternEnding).r
 
-  private val IdReferencePattern = ("^\\s*(0|n|(\\+\\d+))\\s+(\\w+)\\s+@([^@]+)@" +
-    multPatternEnding).r
+    val IdReferencePattern = (
+      depthPattern +
+      "(\\w+)\\s+@([^@]+)@" +
+      multPatternEnding).r
 
-  private val DefinitionPattern = "^\\s*(\\w+): =\\s*$".r
+    val DefinitionPattern = "^\\s*(\\w+): =\\s*$".r
 
-  private val DefinitionReferencePattern = (
-    "^\\s*(0|n|(\\+\\d+))\\s+<<(\\w+)>>" +
-    multPatternEnding).r
+    val DefinitionReferencePattern = (
+      depthPattern +
+      "<<(\\w+)>>" +
+      multPatternEnding).r
+  }
 
   private def toBound(s: String): MultiplicityBound =
     s match {
@@ -68,78 +78,6 @@ private object Grammar {
   private def toMultiplicity(min: String, max: String) =
     Multiplicity(toBound(min), toBound(max))
 
-  private type Input = Either[String, Element]
-
-  private def parseDefinitionLine(input: Input): Input = {
-    if (input.isLeft)
-      DefinitionPattern
-        .findFirstMatchIn(input.left.get)
-        .map(
-          m => DefinitionLine(m.group(1))) match {
-            case Some(e) => Right(e)
-            case None => input
-          }
-    else
-      input
-  }
-
-  private def parseValueLine(input: Input) = {
-    if (input.isLeft)
-      ValuePattern
-        .findFirstMatchIn(input.left.get)
-        .map(
-          m => Value(toDepth(m.group(1)), Tag(m.group(3)), m.group(4),
-            toMultiplicity(m.group(5), m.group(6)))) match {
-            case Some(e) => Right(e)
-            case None => input
-          }
-    else
-      input
-  }
-
-  private def parseIdLine(input: Input) = {
-    if (input.isLeft)
-      IdPattern
-        .findFirstMatchIn(input.left.get)
-        .map(
-          m => Id(toDepth(m.group(1)), Tag(m.group(4)), m.group(3),
-            toMultiplicity(m.group(5), m.group(6)))) match {
-            case Some(e) => Right(e)
-            case None => input
-          }
-    else
-      input
-  }
-
-  private def parseIdReferenceLine(input: Input) = {
-    if (input.isLeft)
-      IdReferencePattern
-        .findFirstMatchIn(input.left.get)
-        .map(
-          m => IdReference(
-            toDepth(m.group(1)),
-            Tag(m.group(3)),
-            m.group(4),
-            toMultiplicity(m.group(5), m.group(6)))) match {
-            case Some(e) => Right(e)
-            case None => input
-          }
-    else
-      input
-  }
-
-  private def parseDefinitionReferenceLine(input: Input) = {
-    if (input.isLeft)
-      DefinitionReferencePattern.findFirstMatchIn(input.left.get).map(
-        m => DefinitionReference(toDepth(m.group(1)), m.group(3),
-          toMultiplicity(m.group(4), m.group(5)))) match {
-          case Some(e) => Right(e)
-          case None => input
-        }
-    else
-      input
-  }
-
   private def toDepth(s: String) = {
     if (s == "0")
       ZeroDepth
@@ -149,21 +87,22 @@ private object Grammar {
       RelativeDepth(s.substring(1).toInt)
   }
 
-  //1=relative level,4=def ref, 6=tag, 9=xref,10=name, 11=min,12=max
   def parse(line: String): Option[Element] = {
-    val input: Input = Left(line)
-    val parsers = List(
-      parseDefinitionLine(_),
-      parseValueLine(_),
-      parseIdLine(_),
-      parseIdReferenceLine(_),
-      parseDefinitionReferenceLine(_))
-
-    parsers
-      .reduce(_ compose _)(input)
-      .right.toOption
+    import Patterns._
+    line match {
+      case ValuePattern(depth, tag, value, min, max) =>
+        Some(Value(toDepth(depth), Tag(tag), value, toMultiplicity(min, max)))
+      case DefinitionPattern(name) =>
+        Some(DefinitionLine(name))
+      case IdPattern(depth, id, tag, min, max) =>
+        Some(Id(toDepth(depth), Tag(tag), id, toMultiplicity(min, max)))
+      case IdReferencePattern(depth, tag, id, min, max) =>
+        Some(IdReference(toDepth(depth), Tag(tag), id, toMultiplicity(min, max)))
+      case DefinitionReferencePattern(depth, name, min, max) =>
+        Some(DefinitionReference(toDepth(depth), name, toMultiplicity(min, max)))
+      case _ => None
+    }
   }
-
 }
 
 class Parser(is: java.io.InputStream) {
