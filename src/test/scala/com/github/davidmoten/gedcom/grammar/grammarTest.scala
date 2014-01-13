@@ -10,7 +10,7 @@ class GrammarTest {
   def testParse {
     import java.io._
     val parser = new Parser(new FileInputStream(new File("src/main/grammar/gedcom-5.5.1.grammar")))
-    parser.parse.foreach(println)
+    parser.parseLines.foreach(println)
   }
   
 }

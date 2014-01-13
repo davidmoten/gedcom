@@ -1,6 +1,8 @@
 package com.github.davidmoten.gedcom.grammar
 
-trait Element
+trait Element {
+  def depth: Depth
+}
 sealed trait Depth
 case object AnyDepth extends Depth
 case object ZeroDepth extends Depth
@@ -18,11 +20,23 @@ case class Id(depth: Depth, tag: Tag, id: String,
   mult: Multiplicity) extends Element
 case class IdReference(depth: Depth, tag: Tag, id: String,
   mult: Multiplicity) extends Element
-case class Definition(name: String, node: Node)
-case class DefinitionLine(name: String) extends Element
-case class Node(level: Int, element: Element, children: Node)
+case class Definition(name: String, node: Node)  {
+  def add(element: Element): Definition = {
+    Definition(name, node.add(element))
+  }
+}
+case class DefinitionLine(name: String) extends Element {
+  val depth = ZeroDepth
+}
+case class Node(element: Element, children: List[Node]) {
+  def add(e: Element): Node = {
+    this
+  }
+}
 case class DefinitionReference(depth: Depth, name: String, mult: Multiplicity) extends Element
-case class Grammar(root: Definition, definitions: List[Definition])
+case class Grammar(definitions: List[Definition]) {
+  def root = definitions(0)
+}
 
 object RegexHelper {
   import java.util.regex._
@@ -40,7 +54,7 @@ private object Grammar {
 
   import java.util.regex._
   import RegexHelper._
-
+  //
   private object Patterns {
 
     private val depthPattern = "^\\s*(0|n|(?:\\+\\d+))\\s+"
@@ -107,15 +121,28 @@ private object Grammar {
 
 class Parser(is: java.io.InputStream) {
 
-  def parse = {
+  def toSchemaElement(element: Element) =
+    element match {
+      case x: DefinitionLine => <xs:complexType name="{x.name}"></xs:complexType>
+
+    }
+
+  def parseLines = {
     io.Source.fromInputStream(is)
       .getLines
       .filter(_.trim.length > 0)
-      .flatMap(line => {
-        println(line);
-        val elem = Grammar.parse(line);
-        println(elem); elem
-      })
+      .flatMap(Grammar.parse(_))
+  }
+
+  def parse = {
+    val g = Grammar(List())
+    parseLines
+      .foldLeft(g)((g, element) =>
+        element match {
+          case x: DefinitionLine => Grammar(Definition(x.name, Node(x, List())) :: g.definitions)
+          case x: Element => Grammar(g.definitions.head.add(x) :: g.definitions.tail)
+          case _ => throw new RuntimeException("unexpected")
+        })
   }
 
 }
