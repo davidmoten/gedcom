@@ -32,7 +32,10 @@ case class DefinitionLine(name: String) extends Element {
 }
 case class Node(element: Element, children: List[Node]) {
   def add(e: Element): Node = {
-    this
+//    e.depth match {
+     // case AnyDepth: Node(element,Node(e,List())::children)
+//    }
+    null
   }
 }
 case class DefinitionReference(depth: Depth, name: String, mult: Multiplicity) extends Element
@@ -56,7 +59,7 @@ private object Grammar {
 
   import java.util.regex._
   import RegexHelper._
-  //
+
   private object Patterns {
 
     private val depthPattern = "^\\s*(0|n|(?:\\+\\d+))\\s+"
