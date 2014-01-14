@@ -174,7 +174,7 @@ n @<XREF:INDI>@   INDI                        {1:1}
 
    SUBMISSION_RECORD: =
 
-  n  @<XREF:SUBN>@ SUBN                       {1:1]
+  n  @<XREF:SUBN>@ SUBN                       {1:1}
     +1 SUBM @<XREF:SUBM>@                     {0:1}
     +1 FAMF <NAME_OF_FAMILY_FILE>             {0:1}
     +1 TEMP <TEMPLE_CODE>                     {0:1}
