@@ -235,7 +235,6 @@ class Parser(is: java.io.InputStream) {
 
   def parse = {
     val g = Grammar(List())
-    val emptyList = List[Element]()
     parseLines
       .foldLeft(g)((g, element) =>
         element match {
