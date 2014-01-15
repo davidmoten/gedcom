@@ -35,6 +35,18 @@ case class IdReference(depth: Depth, tag: Tag, id: String,
 case class DefinitionReference(depth: Depth, name: String, mult: Multiplicity)
   extends Element with NodeElement
 
+case class Group(elements: List[Element]) extends Element {
+  val depth = MinusOneDepth
+}
+
+case class OrBuilding(groups: List[Group]) extends Element {
+  val depth = MinusOneDepth
+}
+
+case class OrBuilt(groups: List[List[Group]]) extends Element {
+  val depth = MinusOneDepth
+}
+
 case class Definition(name: String, children: List[Node]) extends NodeElement {
   import Util._
 
@@ -58,7 +70,7 @@ sealed trait ElementWithoutDepth extends Element {
 
 case object OpenBracket extends ElementWithoutDepth with NodeElement
 case object CloseBracket extends ElementWithoutDepth with NodeElement
-case object Or extends ElementWithoutDepth with NodeElement
+case object OrLine extends ElementWithoutDepth with NodeElement
 
 object Util {
   def unexpected(s: String) = throw new RuntimeException(s)
@@ -74,7 +86,7 @@ case class Node(element: NodeElement, children: List[Node]) {
     lazy val addedToFirstChild = Node(element, children.head.add(nextElement) :: children.tail)
     nextElement.depth match {
       case AnyDepth => nodeWithNewChild
-      case MinusOneDepth=> unexpected
+      case MinusOneDepth => unexpected
       case ZeroDepth => element match {
         case Definition(_, _) => nodeWithNewChild
         case _ => unexpected
@@ -167,7 +179,7 @@ private object Grammar {
       case _ => Specific(s.toInt)
     }
 
-  private def toMultiplicity(min: String, max: String) =
+  private def mult(min: String, max: String) =
     Multiplicity(toBound(min), toBound(max))
 
   private def toDepth(s: String) = {
@@ -184,22 +196,22 @@ private object Grammar {
     import Util._
     line match {
       case ValuePattern(depth, tag, value, min, max) =>
-        Some(Value(toDepth(depth), Tag(tag), value, toMultiplicity(min, max)))
+        Some(Value(toDepth(depth), Tag(tag), value, mult(min, max)))
       case DefinitionPattern(name) =>
         Some(DefinitionLine(name))
       case IdPattern(depth, id, tag, min, max) =>
-        Some(Id(toDepth(depth), Tag(tag), id, toMultiplicity(min, max)))
+        Some(Id(toDepth(depth), Tag(tag), id, mult(min, max)))
       case IdPatternWithValue(depth, id, tag, value, min, max) =>
-        Some(IdWithValue(toDepth(depth), Tag(tag), id, value, toMultiplicity(min, max)))
+        Some(IdWithValue(toDepth(depth), Tag(tag), id, value, mult(min, max)))
       case IdReferencePattern(depth, tag, id, min, max) =>
-        Some(IdReference(toDepth(depth), Tag(tag), id, toMultiplicity(min, max)))
+        Some(IdReference(toDepth(depth), Tag(tag), id, mult(min, max)))
       case DefinitionReferencePattern(depth, name, min, max) =>
-        Some(DefinitionReference(toDepth(depth), name, toMultiplicity(min, max)))
+        Some(DefinitionReference(toDepth(depth), name, mult(min, max)))
       case TagOnlyPattern(depth, tag, min, max) =>
-        Some(TagOnly(toDepth(depth), Tag(tag), toMultiplicity(min, max)))
+        Some(TagOnly(toDepth(depth), Tag(tag), mult(min, max)))
       case OpenBracketPattern() => Some(OpenBracket)
       case CloseBracketPattern() => Some(CloseBracket)
-      case OrPattern() => Some(Or)
+      case OrPattern() => Some(OrLine)
       case _ => unexpected(line)
     }
   }
@@ -223,6 +235,7 @@ class Parser(is: java.io.InputStream) {
 
   def parse = {
     val g = Grammar(List())
+    val emptyList = List[Element]()
     parseLines
       .foldLeft(g)((g, element) =>
         element match {
