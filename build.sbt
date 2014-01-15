@@ -1,7 +1,10 @@
 import sbt._
 
-class GedcomProject(info: ProjectInfo) extends DefaultProject(info) {
+//class GedcomProject(info: ProjectInfo) extends DefaultProject(info) {
+//  val mavenLocal = "Local Maven Repository" at 
+//    "file://"+Path.userHome+"/.m2/repository"
+//}
 
-val mavenLocal = "Local Maven Repository" at 
-"file://"+Path.userHome+"/.m2/repository"
-}
+externalPom()
+
+

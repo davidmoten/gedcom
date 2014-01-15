@@ -74,6 +74,7 @@ case class Node(element: NodeElement, children: List[Node]) {
     lazy val addedToFirstChild = Node(element, children.head.add(nextElement) :: children.tail)
     nextElement.depth match {
       case AnyDepth => nodeWithNewChild
+      case MinusOneDepth=> unexpected
       case ZeroDepth => element match {
         case Definition(_, _) => nodeWithNewChild
         case _ => unexpected
@@ -210,7 +211,7 @@ class Parser(is: java.io.InputStream) {
   def toSchemaElement(element: NodeElement) =
     element match {
       case x: Definition => <xs:complexType name="{x.name}"></xs:complexType>
-
+      case _ => unexpected
     }
 
   def parseLines = {
